@@ -1,6 +1,6 @@
 import numpy as np
 from joblib import Parallel, delayed
-from utilities import compute_rank_matrix, nns_index_array
+from utilities1 import compute_rank_matrix, nns_index_array
 
 
 def compute_info_imbalance_causality(X0, Y0,
