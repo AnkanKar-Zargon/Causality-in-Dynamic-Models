@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import rankdata
 from scipy.spatial.distance import pdist, squareform
 
-def compute_rank_matrix(data, metric="euclidean"):
+def compute_rank_matrix_a(data, metric="euclidean"):
     """
     Computes the pairwise distance matrix of the input data.
 
@@ -39,41 +39,50 @@ def nns_index_array(distance_matrix, k=1):
 
 def compute_info_imbalance(data_A, data_B, k_A=1, k_B=1, metric="euclidean"):
     """
-    Computes the Information Imbalances Delta(A->B) and Delta(B->A) using distances.
+    Computes the Information Imbalances Delta(A->B) and Delta(B->A)
 
     Args:
-        data_A (np.ndarray): shape (N,D1)
-        data_B (np.ndarray): shape (N,D2)
-        k_A (int): number of neighbors for A->B
-        k_B (int): number of neighbors for B->A
-        metric (str): distance metric
+        data_A (np.ndarray): array of shape (N,D1) with N points and D1 features
+
+        data_A (np.ndarray): array of shape (N,D2) with N points and D2 features
+
+        k_A (int, default=1): number of nearest neighbor to compute Delta(A->B)
+
+        k_B (int, default=1): number of nearest neighbor to compute Delta(B->A)
+
+        metric (str, default="euclidean"): name of distance employed
 
     Returns:
-        imb_A_to_B (float): Information Imbalance from A to B
-        imb_B_to_A (float): Information Imbalance from B to A
+        imb_A_to_B (float): Information Imbalance Delta(A->B)
+
+        imb_B_to_A (float): Information Imbalance Delta(B->A)
     """
     if data_A.shape[0] != data_B.shape[0]:
-        raise ValueError("Datasets must have the same number of samples.")
-
+        raise ValueError("Number of points must be the same in the two representations!")
     N = data_A.shape[0]
-    dist_matrix_A = compute_rank_matrix(data_A, metric)
-    dist_matrix_B = compute_rank_matrix(data_B, metric)
+    rank_matrix_A = compute_rank_matrix_a(data_A, metric=metric)
+    rank_matrix_B = compute_rank_matrix_a(data_B, metric=metric)
 
-    nns_A = nns_index_array(dist_matrix_A, k=k_A)
-    nns_B = nns_index_array(dist_matrix_B, k=k_B)
+    # Find the nn indices in each space
+    nns_A = nns_index_array(rank_matrix_A, k=k_A)
+    nns_B = nns_index_array(rank_matrix_B, k=k_B)
 
-    conditional_dists_B = np.zeros((N, k_A))
-    for i in range(N):
-        conditional_dists_B[i] = dist_matrix_B[i, nns_A[i]]
-    conditional_dists_B = conditional_dists_B.flatten()
+    # Find conditional ranks in two spaces
+    conditional_ranks_B = np.zeros((N, k_A))
+    for i_point in range(N):
+        rank_B = rank_matrix_B[i_point][nns_A[i_point]]
+        conditional_ranks_B[i_point] = rank_B
+    conditional_ranks_B = conditional_ranks_B.flatten()
 
-    conditional_dists_A = np.zeros((N, k_B))
-    for i in range(N):
-        conditional_dists_A[i] = dist_matrix_A[i, nns_B[i]]
-    conditional_dists_A = conditional_dists_A.flatten()
-    
-    imb_A_to_B = np.mean(conditional_dists_B) 
-    imb_B_to_A = np.mean(conditional_dists_A)
+    conditional_ranks_A = np.zeros((N, k_B))
+    for i_point in range(N):
+        rank_A = rank_matrix_A[i_point][nns_B[i_point]]
+        conditional_ranks_A[i_point] = rank_A
+    conditional_ranks_A = conditional_ranks_A.flatten()
+
+    # The information imbalances:
+    imb_A_to_B = 2/N * np.mean(conditional_ranks_B)
+    imb_B_to_A = 2/N * np.mean(conditional_ranks_A)
 
     return imb_A_to_B, imb_B_to_A
 

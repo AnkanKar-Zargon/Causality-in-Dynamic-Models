@@ -1,6 +1,6 @@
 import numpy as np
 from joblib import Parallel, delayed
-from utilities1 import compute_rank_matrix, nns_index_array
+from utilities import compute_rank_matrix, nns_index_array
 
 
 def compute_info_imbalance_causality(X0, Y0,
@@ -45,6 +45,7 @@ def compute_info_imbalance_causality(X0, Y0,
         rank_B = np.mean(rank_matrix_Ytau[i_point][nns_A[i_point]])
         conditional_ranks_B[i_point] = rank_B
 
+    print(conditional_ranks_B)
     # Compute the Information Imbalance:
     info_imbalance = 2/N * np.mean(conditional_ranks_B)
 
